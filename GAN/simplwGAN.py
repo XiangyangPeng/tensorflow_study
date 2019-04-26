@@ -45,6 +45,62 @@ class GAN():
             hidden1=tf.layers.dropout(hidden1,rate=0.2) #drop out some neurons to avoid overfitting
             ###i am thinking that maybe  a class Dense or something can be used to replace all these above
             
+            #logist & outputs
+            logist = tf.layers.dense(hidden1,out_dim)
+            outputs=tf.atanh(logist)
+            return logist,outputs
+        
+    @staticmethod
+    def get_discriminator(self,img,n_units,reuse=False,alpha=0.01):
+        with tf.variable_scope("discriminator",reuse=reuse):
+            #hidden layer
+            hidden1=tf.layers.dense(img,n_units)
+            hidden1=tf.maximum(alpha*hidden1,hidden1)
+            
+            #logist & outputs
+            logist=tf.layers.dense(hidden1,1)
+            #the purpose of discriminator is to diffrentiate original data and generated data,
+            #so "out_dim" = 1
+            outputs=tf.sigmoid(logist)
+            return logist,outputs
+        
+    @staticmethod
+    def view_samples(self,epoch,samples):
+        fig,axes=plt.subplots(figsize=(7,7),nrows=5,ncols=5,sharey=True,sharex=True)
+        for ax,img in zip(axes.flatten(),samples[epoch][1]):
+            ax.xaxis.set_visible(False)
+            ax.yaxis.set_visible(False)
+            ax.imshow(img.reshape(28,28),cmap='Grays_r')
+            
+        return fig,axes
+    
+    def inference(self):
+        g_logist,g_outputs=self.get_generator(self,self.noise_img,g_units,img_size)
+        d_logist_real,d_outputs_real=self.get_discriminator(self,self.real_img,d_units)
+        d_logist_fake,d_outputs_fake=self.get_discriminator(self,g_outputs,d_units,reuse=True)
+        #cross entropy loss function:logist+targets 
+        #smooth ???
+        self.d_loss_real=tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logist=d_logist_real,labels=tf.ones_like(d_logist_real))*(1-smooth))
+        self.d_loss_fake=tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logist=d_logist_fake,labels=tf.ones_like(d_logist_fake)))
+        self.d_loss=tf.add(self.d_loss_fake,self.d_loss_real)
+        
+        #generator should fraud the discriminator, so the logists and targets loss function is special
+        self.g_loss=tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logist=d_logist_fake,labels=tf.ones_like(d_logist_fake))*(1-smooth))
+        
+        #get the trainable vars
+        train_vars=tf.trainable_variables()
+        self.g_vars=[var for var in train_vars if var.name.startwith("generator")]
+        self.d_vars=[var for var in train_vars if var.name.startwith("discriminator")]
+        
+        #optimizer
+        d_train_opt=tf.train.AdamOptimizer(learning_rate).minimize(self.d_loss,var_list=self.d_vars)
+        g_train_opt=tf.train.AdamOptimizer(learning_rate).minimize(self.g_loss,var_list=self.g_vars)
+        
+        self.saver=tf.train.Saver(var_list=self.g_vars)
+        
+        return d_train_opt,g_train_opt
+            
+            
             
             
         
