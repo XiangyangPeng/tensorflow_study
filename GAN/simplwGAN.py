@@ -180,10 +180,10 @@ class GAN():
             sample_noise=np.random.uniform(-1,1,size=(25,100))#size=(n_sample,noise_size)
             gen_samples=sess.run(self.get_generator(self,self.noise_img,g_units,img_size,reuse=True),feed_dict={self.noise_img:sample_noise})
         self.view_samples(self,0,[gen_samples])
-#tf.reset_default_graph()         
+tf.reset_default_graph()      
+#if you want to execute the graph creation again,you must add the code above        
 gan=GAN(img_size=784,noise_size=100)
 #train
-
 d_train_opt,g_train_opt=gan.inference()
 losses=gan.training(d_train_opt,g_train_opt)
 gan.draw_loss(losses)
